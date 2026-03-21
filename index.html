@@ -357,8 +357,9 @@ function toggleLang() {
 // ════════════════════════════════════════════════
 //  CONFIG
 // ════════════════════════════════════════════════
-const PROJECT_NAME = 'Manzanitos';
-const DAYS_BEFORE  = 3;
+const PROJECT_NAME  = 'Manzanitos';
+const SECTION_NAME  = 'Despensa';
+const DAYS_BEFORE   = 3;
 
 const API = 'https://api.todoist.com/api/v1';
 let H = {};
@@ -366,6 +367,7 @@ let H = {};
 let selectedEmoji = '🥦';
 let currentFilter = 'all';
 let projectId     = null;
+let sectionId     = null;
 let products      = [];
 
 // ── Token management ─────────────────────────────
@@ -467,12 +469,24 @@ async function getOrCreateProject() {
   return (await cr.json()).id;
 }
 
+async function getOrCreateSection(projId) {
+  const res = await fetch(`${API}/sections?project_id=${projId}`, { headers: H });
+  if (!res.ok) throw new Error('sections');
+  const list = await res.json();
+  const found = list.find(s => s.name.toLowerCase() === SECTION_NAME.toLowerCase());
+  if (found) return found.id;
+  const cr = await fetch(`${API}/sections`, { method:'POST', headers:H, body:JSON.stringify({project_id: projId, name: SECTION_NAME}) });
+  if (!cr.ok) throw new Error('create_section');
+  return (await cr.json()).id;
+}
+
 async function loadFromTodoist() {
   const btn = document.getElementById('syncBtn');
   btn.classList.add('spinning');
   try {
     projectId = await getOrCreateProject();
-    const res = await fetch(`${API}/tasks?project_id=${projectId}`, { headers: H });
+    sectionId = await getOrCreateSection(projectId);
+    const res = await fetch(`${API}/tasks?project_id=${projectId}&section_id=${sectionId}`, { headers: H });
     if (!res.ok) throw new Error();
     const tasks = await res.json();
     products = tasks.map(parseTask).filter(Boolean);
@@ -498,6 +512,7 @@ async function addProduct() {
 
   try {
     if (!projectId) projectId = await getOrCreateProject();
+    if (!sectionId) sectionId = await getOrCreateSection(projectId);
 
     const alertDate = new Date(date+'T00:00:00');
     alertDate.setDate(alertDate.getDate() - DAYS_BEFORE);
@@ -506,6 +521,7 @@ async function addProduct() {
     const body = {
       content: buildContent(selectedEmoji, name, date),
       project_id: projectId,
+      section_id: sectionId,
       due_date: alertStr,
       description: `⚠️ This product expires on ${formatDate(date)}.\nAdded from Manzanitos.`
     };

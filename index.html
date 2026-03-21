@@ -461,7 +461,8 @@ async function getOrCreateProject() {
     throw new Error('auth');
   }
   if (!res.ok) throw new Error('network');
-  const list = await res.json();
+  const data = await res.json();
+  const list = data.results || data;
   const found = list.find(p => p.name.toLowerCase() === PROJECT_NAME.toLowerCase());
   if (found) return found.id;
   const cr = await fetch(`${API}/projects`, { method:'POST', headers:H, body:JSON.stringify({name:PROJECT_NAME, color:'lime_green'}) });
@@ -472,7 +473,8 @@ async function getOrCreateProject() {
 async function getOrCreateSection(projId) {
   const res = await fetch(`${API}/sections?project_id=${projId}`, { headers: H });
   if (!res.ok) throw new Error('sections');
-  const list = await res.json();
+  const data = await res.json();
+  const list = data.results || data;
   const found = list.find(s => s.name.toLowerCase() === SECTION_NAME.toLowerCase());
   if (found) return found.id;
   const cr = await fetch(`${API}/sections`, { method:'POST', headers:H, body:JSON.stringify({project_id: projId, name: SECTION_NAME}) });
@@ -488,7 +490,8 @@ async function loadFromTodoist() {
     sectionId = await getOrCreateSection(projectId);
     const res = await fetch(`${API}/tasks?project_id=${projectId}&section_id=${sectionId}`, { headers: H });
     if (!res.ok) throw new Error();
-    const tasks = await res.json();
+    const data = await res.json();
+    const tasks = data.results || data;
     products = tasks.map(parseTask).filter(Boolean);
     products.sort((a,b) => a.date.localeCompare(b.date));
     renderList(); updateStats(); setSyncStatus(true);

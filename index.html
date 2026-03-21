@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#1a1a0e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Manzanitos">
+<title>Manzanitos 🍎</title>
+<script>
+  const manifest = {
+    name: "Manzanitos",short_name:"Manzanitos",
+    description:"Food expiration tracker",
+    start_url:".",display:"standalone",
+    background_color:"#1a1a0e",theme_color:"#1a1a0e",
+    icons:[{src:"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍎</text></svg>",sizes:"512x512",type:"image/svg+xml"}]
+  };
+  const blob=new Blob([JSON.stringify(manifest)],{type:'application/json'});
+  document.write(`<link rel="manifest" href="${URL.createObjectURL(blob)}">`);
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#1a1a0e;--bg2:#22220f;--bg3:#2a2a14;--card:#242415;
+  --border:#3a3a1e;--green:#b8e04a;--green-dim:#7a9a2e;
+  --yellow:#e8c840;--orange:#e87a30;--red:#e84040;
+  --text:#f0ead0;--text-dim:#8a8a60;--text-muted:#5a5a40;
+  --serif:'Playfair Display',Georgia,serif;--mono:'DM Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--mono);font-size:14px;line-height:1.6;overscroll-behavior:none}
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:1000;opacity:.35}
+.app{max-width:480px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column;padding:0 0 100px}
+
+header{padding:48px 24px 24px;position:relative}
+.header-eyebrow{font-size:11px;font-weight:300;letter-spacing:.2em;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.header-title{font-family:var(--serif);font-size:42px;font-weight:700;line-height:1;color:var(--text)}
+.header-title .apple{font-style:italic;color:var(--green)}
+.header-subtitle{margin-top:8px;font-size:12px;color:var(--text-muted);font-weight:300}
+
+.sync-btn{position:absolute;top:48px;right:24px;background:var(--bg3);border:1px solid var(--border);color:var(--text-dim);width:40px;height:40px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;transition:all .2s}
+.sync-btn:hover{background:var(--border);color:var(--green)}
+.sync-btn.spinning{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.stats{display:flex;gap:2px;margin:0 24px 24px;background:var(--bg3);border-radius:12px;overflow:hidden;border:1px solid var(--border)}
+.stat{flex:1;padding:12px 8px;text-align:center}
+.stat-num{font-family:var(--serif);font-size:24px;font-weight:700;line-height:1}
+.stat-label{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.1em;margin-top:2px}
+.stat.ok .stat-num{color:var(--green)}
+.stat.warn .stat-num{color:var(--yellow)}
+.stat.danger .stat-num{color:var(--red)}
+
+.add-section{margin:0 24px 24px}
+.section-label{font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.section-label::after{content:'';flex:1;height:1px;background:var(--border)}
+
+.add-form{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.form-row{display:flex;align-items:center;border-bottom:1px solid var(--border);padding:0 16px}
+.form-row:last-child{border-bottom:none}
+.form-icon{font-size:16px;margin-right:10px;flex-shrink:0}
+.form-input{flex:1;background:transparent;border:none;outline:none;color:var(--text);font-family:var(--mono);font-size:14px;padding:14px 0;font-weight:300}
+.form-input::placeholder{color:var(--text-muted)}
+input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(.4) sepia(1) hue-rotate(50deg);cursor:pointer}
+
+.emoji-row{padding:10px 16px;border-bottom:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap}
+.emoji-btn{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:4px 10px;cursor:pointer;font-size:18px;transition:all .15s;line-height:1.4}
+.emoji-btn:hover,.emoji-btn.selected{background:var(--green);border-color:var(--green);transform:scale(1.1)}
+
+.add-btn{width:100%;padding:14px;background:var(--green);border:none;color:var(--bg);font-family:var(--mono);font-size:13px;font-weight:400;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px}
+.add-btn:hover{background:#caf060}
+.add-btn:active{transform:scale(.98)}
+.add-btn:disabled{background:var(--bg3);color:var(--text-muted);cursor:not-allowed}
+
+.list-section{margin:0 24px}
+.products-list{display:flex;flex-direction:column;gap:8px}
+
+.product-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:12px;transition:all .2s;animation:slideIn .3s ease;cursor:default}
+@keyframes slideIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+.product-card:hover{border-color:var(--green-dim)}
+.product-card.danger{border-color:rgba(232,64,64,.3);background:rgba(232,64,64,.05)}
+.product-card.warn{border-color:rgba(232,200,64,.3);background:rgba(232,200,64,.05)}
+.product-card.expired{opacity:.5}
+
+.product-emoji{font-size:28px;flex-shrink:0;width:36px;text-align:center}
+.product-info{flex:1;min-width:0}
+.product-name{font-family:var(--serif);font-size:16px;font-weight:400;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.product-date{font-size:11px;color:var(--text-muted);font-weight:300;margin-top:1px}
+
+.product-badge{font-size:11px;font-weight:400;padding:3px 10px;border-radius:20px;flex-shrink:0;font-family:var(--mono);letter-spacing:.05em}
+.badge-ok{background:rgba(184,224,74,.15);color:var(--green)}
+.badge-warn{background:rgba(232,200,64,.15);color:var(--yellow)}
+.badge-danger{background:rgba(232,122,48,.15);color:var(--orange)}
+.badge-expired{background:rgba(232,64,64,.1);color:var(--red)}
+.badge-today{background:rgba(232,64,64,.2);color:var(--red)}
+
+.product-del{background:transparent;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;padding:4px;border-radius:6px;transition:all .15s;flex-shrink:0}
+.product-del:hover{color:var(--red);background:rgba(232,64,64,.1)}
+
+.empty{text-align:center;padding:48px 24px;color:var(--text-muted)}
+.empty-icon{font-size:48px;margin-bottom:12px;opacity:.4}
+.empty-text{font-family:var(--serif);font-size:18px;font-style:italic;color:var(--text-dim)}
+.empty-sub{font-size:12px;margin-top:6px}
+
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:var(--green);color:var(--bg);font-family:var(--mono);font-size:12px;padding:10px 20px;border-radius:20px;z-index:9999;transition:transform .3s cubic-bezier(.34,1.56,.64,1);white-space:nowrap;max-width:90vw}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast.error{background:var(--red);color:#fff}
+.toast.info{background:var(--bg3);color:var(--text);border:1px solid var(--border)}
+
+.skeleton{background:linear-gradient(90deg,var(--bg3) 25%,var(--border) 50%,var(--bg3) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:14px;height:68px}
+@keyframes shimmer{to{background-position:-200% 0}}
+
+.todoist-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;flex-shrink:0}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.todoist-dot.error{background:var(--red);animation:none}
+
+.filter-tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.filter-tab{font-family:var(--mono);font-size:11px;letter-spacing:.05em;padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text-muted);cursor:pointer;transition:all .15s}
+.filter-tab:hover{color:var(--text);border-color:var(--text-dim)}
+.filter-tab.active{background:var(--green);border-color:var(--green);color:var(--bg)}
+
+.list-divider{font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--text-muted);margin:16px 0 8px;display:flex;align-items:center;gap:8px}
+.list-divider::after{content:'';flex:1;height:1px;background:var(--border)}
+
+.setup-screen{position:fixed;inset:0;background:var(--bg);z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;text-align:center}
+.setup-screen.hidden{display:none}
+.setup-apple{font-size:64px;margin-bottom:24px;animation:float 3s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.setup-title{font-family:var(--serif);font-size:36px;font-weight:700;color:var(--text);margin-bottom:6px}
+.setup-title span{font-style:italic;color:var(--green)}
+.setup-sub{font-size:12px;color:var(--text-muted);font-weight:300;margin-bottom:32px;line-height:1.8}
+.setup-sub a{color:var(--green);text-decoration:none}
+.setup-sub a:hover{text-decoration:underline}
+.token-input-wrap{width:100%;max-width:360px;background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:12px}
+.token-row{display:flex;align-items:center;padding:0 16px;gap:10px}
+.token-input{flex:1;background:transparent;border:none;outline:none;color:var(--text);font-family:var(--mono);font-size:13px;padding:16px 0;font-weight:300;letter-spacing:.05em}
+.token-input::placeholder{color:var(--text-muted)}
+.token-eye{background:transparent;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;padding:4px;transition:color .15s;flex-shrink:0}
+.token-eye:hover{color:var(--green)}
+.setup-btn{width:100%;max-width:360px;padding:15px;background:var(--green);border:none;color:var(--bg);font-family:var(--mono);font-size:13px;font-weight:400;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;border-radius:14px;transition:all .2s}
+.setup-btn:hover{background:#caf060}
+.setup-btn:disabled{background:var(--bg3);color:var(--text-muted);cursor:not-allowed}
+.setup-hint{font-size:11px;color:var(--text-muted);margin-top:16px;line-height:1.7}
+
+.settings-btn{position:absolute;top:48px;right:72px;background:var(--bg3);border:1px solid var(--border);color:var(--text-dim);width:40px;height:40px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;transition:all .2s}
+.settings-btn:hover{background:var(--border);color:var(--green)}
+
+.lang-btn{position:absolute;top:48px;right:120px;background:var(--bg3);border:1px solid var(--border);color:var(--text-dim);width:40px;height:40px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .2s;font-family:var(--mono);font-weight:400}
+.lang-btn:hover{background:var(--border);color:var(--green)}
+
+.setup-lang-btn{position:absolute;top:24px;right:24px;background:var(--bg3);border:1px solid var(--border);color:var(--text-dim);height:36px;padding:0 14px;border-radius:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;transition:all .2s;font-family:var(--mono);font-weight:300;gap:6px}
+.setup-lang-btn:hover{background:var(--border);color:var(--green)}
+</style>
+</head>
+<body>
+<!-- Setup / Token screen -->
+<div class="setup-screen" id="setupScreen">
+  <button class="setup-lang-btn" id="setupLangBtn" onclick="toggleLang()">🌐 <span data-i18n="lang_switch"></span></button>
+  <div class="setup-apple">🍎</div>
+  <h1 class="setup-title">Manza<span>nitos</span></h1>
+  <p class="setup-sub" id="setupSub">
+    <span data-i18n="setup_line1"></span><br>
+    <span data-i18n="setup_line2_pre"></span> <a href="https://app.todoist.com/app/settings/integrations/developer" target="_blank" data-i18n="setup_line2_link"></a><br>
+    <span data-i18n="setup_line3"></span>
+  </p>
+  <div class="token-input-wrap">
+    <div class="token-row">
+      <input class="token-input" id="tokenInput" type="password" autocomplete="off" spellcheck="false">
+      <button class="token-eye" id="tokenEye" onclick="toggleTokenVisibility()" title="Show/Hide">👁</button>
+    </div>
+  </div>
+  <button class="setup-btn" id="setupBtn" onclick="saveToken()" data-i18n="setup_connect"></button>
+  <p class="setup-hint">🔒 <span data-i18n="setup_hint"></span></p>
+</div>
+
+<div class="app" id="mainApp" style="display:none">
+  <header>
+    <div class="header-eyebrow">
+      <span class="todoist-dot" id="syncDot"></span>
+      <span data-i18n="header_eyebrow"></span>
+    </div>
+    <h1 class="header-title">Manza<span class="apple">nitos</span></h1>
+    <p class="header-subtitle" data-i18n="header_subtitle"></p>
+    <button class="lang-btn" id="langBtn" onclick="toggleLang()" title="Language">🌐</button>
+    <button class="settings-btn" onclick="showSetup()" title="Settings">⚙</button>
+    <button class="sync-btn" id="syncBtn" onclick="loadFromTodoist()" title="Sync">↻</button>
+  </header>
+
+  <div class="stats">
+    <div class="stat ok"><div class="stat-num" id="statOk">—</div><div class="stat-label" data-i18n="stat_fresh"></div></div>
+    <div class="stat warn"><div class="stat-num" id="statWarn">—</div><div class="stat-label" data-i18n="stat_soon"></div></div>
+    <div class="stat danger"><div class="stat-num" id="statDanger">—</div><div class="stat-label" data-i18n="stat_urgent"></div></div>
+  </div>
+
+  <div class="add-section">
+    <div class="section-label" data-i18n="section_add"></div>
+    <div class="add-form">
+      <div class="emoji-row" id="emojiRow">
+        <button class="emoji-btn selected" data-emoji="🥦" onclick="selectEmoji(this)">🥦</button>
+        <button class="emoji-btn" data-emoji="🥩" onclick="selectEmoji(this)">🥩</button>
+        <button class="emoji-btn" data-emoji="🥛" onclick="selectEmoji(this)">🥛</button>
+        <button class="emoji-btn" data-emoji="🧀" onclick="selectEmoji(this)">🧀</button>
+        <button class="emoji-btn" data-emoji="🍳" onclick="selectEmoji(this)">🍳</button>
+        <button class="emoji-btn" data-emoji="🍞" onclick="selectEmoji(this)">🍞</button>
+        <button class="emoji-btn" data-emoji="🥫" onclick="selectEmoji(this)">🥫</button>
+        <button class="emoji-btn" data-emoji="🧃" onclick="selectEmoji(this)">🧃</button>
+        <button class="emoji-btn" data-emoji="🍎" onclick="selectEmoji(this)">🍎</button>
+        <button class="emoji-btn" data-emoji="🫙" onclick="selectEmoji(this)">🫙</button>
+      </div>
+      <div class="form-row">
+        <span class="form-icon">✏️</span>
+        <input class="form-input" id="productName" type="text" maxlength="80">
+      </div>
+      <div class="form-row">
+        <span class="form-icon">📅</span>
+        <input class="form-input" id="expiryDate" type="date">
+      </div>
+      <button class="add-btn" id="addBtn" onclick="addProduct()">
+        <span>＋</span> <span data-i18n="btn_add"></span>
+      </button>
+    </div>
+  </div>
+
+  <div class="list-section">
+    <div class="section-label" data-i18n="section_pantry"></div>
+    <div class="filter-tabs" id="filterTabs">
+      <button class="filter-tab active" onclick="setFilter('all',this)" data-i18n="filter_all"></button>
+      <button class="filter-tab" onclick="setFilter('urgent',this)">⚠️ <span data-i18n="filter_urgent"></span></button>
+      <button class="filter-tab" onclick="setFilter('ok',this)">✅ <span data-i18n="filter_fresh"></span></button>
+      <button class="filter-tab" onclick="setFilter('expired',this)">💀 <span data-i18n="filter_expired"></span></button>
+    </div>
+    <div class="products-list" id="productsList">
+      <div class="skeleton"></div>
+      <div class="skeleton" style="opacity:.6;margin-top:8px"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ════════════════════════════════════════════════
+//  I18N
+// ════════════════════════════════════════════════
+const i18n = {
+  en: {
+    lang_switch: 'Español',
+    setup_line1: 'To get started, paste your Todoist token.',
+    setup_line2_pre: 'Find it at',
+    setup_line2_link: 'Todoist → Settings → Integrations',
+    setup_line3: 'The token is stored only on this device.',
+    setup_connect: 'Connect to Todoist',
+    setup_hint: 'Your token is saved in your browser\'s localStorage. It never leaves your device.',
+    token_placeholder: 'Paste your token here...',
+    header_eyebrow: 'synced with todoist',
+    header_subtitle: 'expiration tracker · Manzanitos project',
+    stat_fresh: 'fresh',
+    stat_soon: 'soon',
+    stat_urgent: 'urgent',
+    section_add: 'Add product',
+    product_placeholder: 'Product name...',
+    btn_add: 'Add to Manzanitos',
+    btn_saving: '⏳ Saving...',
+    section_pantry: 'Pantry',
+    filter_all: 'All',
+    filter_urgent: 'Urgent',
+    filter_fresh: 'Fresh',
+    filter_expired: 'Expired',
+    expires: 'expires',
+    badge_expired: 'Expired',
+    badge_today: 'Today!',
+    divider_expired: '💀 expired',
+    divider_urgent: '⚠️ urgent',
+    divider_fresh: '✅ fresh',
+    empty_all: ['Empty pantry', 'Add your first product above'],
+    empty_urgent: ['No urgencies 🎉', 'Everything looks good for now'],
+    empty_ok: ['No fresh products', 'All items are expiring soon'],
+    empty_expired: ['No expired items 👏', 'Your pantry is up to date'],
+    toast_added: 'added to Todoist!',
+    toast_deleted: 'removed',
+    toast_fill: 'Fill in name and date',
+    toast_save_err: 'Error saving to Todoist',
+    toast_sync_err: 'Error connecting to Todoist — check your token',
+    toast_token_first: 'Paste your token first',
+    toast_invalid: 'Invalid token — try again',
+    date_locale: 'en-US',
+  },
+  es: {
+    lang_switch: 'English',
+    setup_line1: 'Para empezar, pega tu token de Todoist.',
+    setup_line2_pre: 'Lo encuentras en',
+    setup_line2_link: 'Todoist → Configuración → Integraciones',
+    setup_line3: 'El token se guarda solo en este dispositivo.',
+    setup_connect: 'Conectar con Todoist',
+    setup_hint: 'Tu token se guarda en el localStorage de tu navegador. Nunca sale de tu dispositivo.',
+    token_placeholder: 'Pega tu token aquí...',
+    header_eyebrow: 'sincronizado con todoist',
+    header_subtitle: 'control de expiración · proyecto Manzanitos',
+    stat_fresh: 'frescos',
+    stat_soon: 'pronto',
+    stat_urgent: 'urgente',
+    section_add: 'Agregar producto',
+    product_placeholder: 'Nombre del producto...',
+    btn_add: 'Agregar a Manzanitos',
+    btn_saving: '⏳ Guardando...',
+    section_pantry: 'Despensa',
+    filter_all: 'Todos',
+    filter_urgent: 'Urgente',
+    filter_fresh: 'Frescos',
+    filter_expired: 'Expirados',
+    expires: 'expira',
+    badge_expired: 'Expirado',
+    badge_today: '¡Hoy!',
+    divider_expired: '💀 expirados',
+    divider_urgent: '⚠️ urgente',
+    divider_fresh: '✅ frescos',
+    empty_all: ['Despensa vacía', 'Agrega tu primer producto arriba'],
+    empty_urgent: ['Sin urgencias 🎉', 'Todo está bien por ahora'],
+    empty_ok: ['Sin productos frescos', 'Todos están próximos a expirar'],
+    empty_expired: ['Sin expirados 👏', 'La despensa está al día'],
+    toast_added: 'agregado a Todoist!',
+    toast_deleted: 'eliminado',
+    toast_fill: 'Completa nombre y fecha',
+    toast_save_err: 'Error al guardar en Todoist',
+    toast_sync_err: 'Error conectando a Todoist — revisa tu token',
+    toast_token_first: 'Pega tu token primero',
+    toast_invalid: 'Token inválido — vuelve a pegarlo',
+    date_locale: 'es-MX',
+  }
+};
+
+let lang = localStorage.getItem('manzanitos_lang') || 'en';
+
+function t(key) { return i18n[lang][key] || i18n.en[key] || key; }
+
+function applyI18n() {
+  document.documentElement.lang = lang;
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    const val = t(key);
+    if (typeof val === 'string') el.textContent = val;
+  });
+  const tokenInp = document.getElementById('tokenInput');
+  if (tokenInp) tokenInp.placeholder = t('token_placeholder');
+  const prodInp = document.getElementById('productName');
+  if (prodInp) prodInp.placeholder = t('product_placeholder');
+  renderList();
+}
+
+function toggleLang() {
+  lang = lang === 'en' ? 'es' : 'en';
+  localStorage.setItem('manzanitos_lang', lang);
+  applyI18n();
+}
+
+// ════════════════════════════════════════════════
+//  CONFIG
+// ════════════════════════════════════════════════
+const PROJECT_NAME = 'Manzanitos';
+const DAYS_BEFORE  = 3;
+
+const API = 'https://api.todoist.com/rest/v2';
+let H = {};
+
+let selectedEmoji = '🥦';
+let currentFilter = 'all';
+let projectId     = null;
+let products      = [];
+
+// ── Token management ─────────────────────────────
+function getToken() { return localStorage.getItem('manzanitos_token') || ''; }
+
+function saveToken() {
+  const val = document.getElementById('tokenInput').value.trim();
+  if (!val) { showToast(t('toast_token_first'), 'error'); return; }
+  localStorage.setItem('manzanitos_token', val);
+  initWithToken(val);
+}
+
+function showSetup(msg) {
+  document.getElementById('mainApp').style.display = 'none';
+  document.getElementById('setupScreen').classList.remove('hidden');
+  const saved = getToken();
+  if (saved) document.getElementById('tokenInput').value = saved;
+  if (msg) showToast(msg, 'error');
+}
+
+function initWithToken(token) {
+  H = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+  document.getElementById('setupScreen').classList.add('hidden');
+  document.getElementById('mainApp').style.display = 'flex';
+  loadFromTodoist();
+}
+
+function toggleTokenVisibility() {
+  const inp = document.getElementById('tokenInput');
+  const eye = document.getElementById('tokenEye');
+  if (inp.type === 'password') { inp.type = 'text'; eye.textContent = '🙈'; }
+  else { inp.type = 'password'; eye.textContent = '👁'; }
+}
+
+document.getElementById('tokenInput').addEventListener('keydown', e => { if(e.key==='Enter') saveToken(); });
+
+// ── Helpers ──────────────────────────────────────
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+function showToast(msg, type='ok') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `toast show${type==='error'?' error':type==='info'?' info':''}`;
+  setTimeout(() => el.className='toast', 2800);
+}
+
+function setSyncStatus(ok) {
+  document.getElementById('syncDot').className = 'todoist-dot' + (ok ? '' : ' error');
+}
+
+function daysUntil(dateStr) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  return Math.round((new Date(dateStr+'T00:00:00') - today) / 86400000);
+}
+
+function formatDate(dateStr) {
+  return new Date(dateStr+'T00:00:00').toLocaleDateString(t('date_locale'),{day:'numeric',month:'short',year:'numeric'});
+}
+
+function getBadge(days) {
+  if (days < 0)   return { cls:'badge-expired', txt: t('badge_expired') };
+  if (days === 0) return { cls:'badge-today',   txt: t('badge_today') };
+  if (days <= 2)  return { cls:'badge-danger',  txt:`${days}d` };
+  if (days <= 7)  return { cls:'badge-warn',    txt:`${days}d` };
+  return               { cls:'badge-ok',       txt:`${days}d` };
+}
+
+function getCardClass(days) {
+  if (days < 0)  return 'expired';
+  if (days <= 2) return 'danger';
+  if (days <= 7) return 'warn';
+  return '';
+}
+
+// ── Parse / build task content ───────────────────
+function parseTask(task) {
+  const m = (task.content||'').match(/^(\S+)\s+(.+?)\s+—\s+vence:\s+(\d{4}-\d{2}-\d{2})$/);
+  if (!m) return null;
+  return { id: task.id, emoji: m[1], name: m[2], date: m[3] };
+}
+
+function buildContent(emoji, name, date) {
+  return `${emoji} ${name} — vence: ${date}`;
+}
+
+// ── Todoist API calls ─────────────────────────────
+async function getOrCreateProject() {
+  const res = await fetch(`${API}/projects`, { headers: H });
+  if (res.status === 401 || res.status === 403) {
+    showSetup(t('toast_invalid'));
+    throw new Error('auth');
+  }
+  if (!res.ok) throw new Error('network');
+  const list = await res.json();
+  const found = list.find(p => p.name.toLowerCase() === PROJECT_NAME.toLowerCase());
+  if (found) return found.id;
+  const cr = await fetch(`${API}/projects`, { method:'POST', headers:H, body:JSON.stringify({name:PROJECT_NAME, color:'lime_green'}) });
+  if (!cr.ok) throw new Error('create_project');
+  return (await cr.json()).id;
+}
+
+async function loadFromTodoist() {
+  const btn = document.getElementById('syncBtn');
+  btn.classList.add('spinning');
+  try {
+    projectId = await getOrCreateProject();
+    const res = await fetch(`${API}/tasks?project_id=${projectId}`, { headers: H });
+    if (!res.ok) throw new Error();
+    const tasks = await res.json();
+    products = tasks.map(parseTask).filter(Boolean);
+    products.sort((a,b) => a.date.localeCompare(b.date));
+    renderList(); updateStats(); setSyncStatus(true);
+  } catch(e) {
+    if (e.message !== 'auth') {
+      setSyncStatus(false);
+      showToast(t('toast_sync_err'), 'error');
+    }
+    renderList();
+  }
+  btn.classList.remove('spinning');
+}
+
+async function addProduct() {
+  const name = document.getElementById('productName').value.trim();
+  const date = document.getElementById('expiryDate').value;
+  if (!name || !date) { showToast(t('toast_fill'), 'error'); return; }
+
+  const btn = document.getElementById('addBtn');
+  btn.disabled = true; btn.innerHTML = t('btn_saving');
+
+  try {
+    if (!projectId) projectId = await getOrCreateProject();
+
+    const alertDate = new Date(date+'T00:00:00');
+    alertDate.setDate(alertDate.getDate() - DAYS_BEFORE);
+    const alertStr = alertDate.toISOString().split('T')[0];
+
+    const body = {
+      content: buildContent(selectedEmoji, name, date),
+      project_id: projectId,
+      due_date: alertStr,
+      description: `⚠️ This product expires on ${formatDate(date)}.\nAdded from Manzanitos.`
+    };
+
+    const res = await fetch(`${API}/tasks`, { method:'POST', headers:H, body:JSON.stringify(body) });
+    if (!res.ok) throw new Error();
+    const task = await res.json();
+    const parsed = parseTask(task);
+    if (parsed) {
+      products.push(parsed);
+      products.sort((a,b) => a.date.localeCompare(b.date));
+    }
+    renderList(); updateStats();
+    showToast(`${selectedEmoji} ${name} ${t('toast_added')}`);
+    document.getElementById('productName').value = '';
+    const nd = new Date(); nd.setDate(nd.getDate()+7);
+    document.getElementById('expiryDate').value = nd.toISOString().split('T')[0];
+  } catch(e) {
+    showToast(t('toast_save_err'), 'error');
+  }
+  btn.disabled = false; btn.innerHTML = `<span>＋</span> ${t('btn_add')}`;
+}
+
+async function deleteProduct(id, name) {
+  const res = await fetch(`${API}/tasks/${id}`, { method:'DELETE', headers:H });
+  if (res.ok || res.status === 204) {
+    products = products.filter(p => p.id !== id);
+    renderList(); updateStats();
+    showToast(`${name} ${t('toast_deleted')}`, 'info');
+  } else {
+    showToast('Error', 'error');
+  }
+}
+
+// ── Render ────────────────────────────────────────
+function setFilter(f, el) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderList();
+}
+
+function cardHtml(p) {
+  const days  = daysUntil(p.date);
+  const badge = getBadge(days);
+  const cc    = getCardClass(days);
+  return `<div class="product-card ${cc}">
+    <div class="product-emoji">${p.emoji}</div>
+    <div class="product-info">
+      <div class="product-name">${esc(p.name)}</div>
+      <div class="product-date">${t('expires')} ${formatDate(p.date)}</div>
+    </div>
+    <span class="product-badge ${badge.cls}">${badge.txt}</span>
+    <button class="product-del" onclick="deleteProduct('${p.id}','${esc(p.name)}')" title="Delete">✕</button>
+  </div>`;
+}
+
+function renderList() {
+  const list = document.getElementById('productsList');
+
+  const filtered = products.filter(p => {
+    const d = daysUntil(p.date);
+    if (currentFilter === 'urgent')  return d >= 0 && d <= 7;
+    if (currentFilter === 'ok')      return d > 7;
+    if (currentFilter === 'expired') return d < 0;
+    return true;
+  });
+
+  if (!filtered.length) {
+    const msgs = {
+      all: t('empty_all'),
+      urgent: t('empty_urgent'),
+      ok: t('empty_ok'),
+      expired: t('empty_expired')
+    };
+    const [title, sub] = msgs[currentFilter] || msgs.all;
+    list.innerHTML = `<div class="empty"><div class="empty-icon">🍎</div><div class="empty-text">${title}</div><div class="empty-sub">${sub}</div></div>`;
+    return;
+  }
+
+  if (currentFilter !== 'all') {
+    list.innerHTML = filtered.map(cardHtml).join('');
+    return;
+  }
+
+  const expired = filtered.filter(p => daysUntil(p.date) < 0);
+  const urgent  = filtered.filter(p => { const d=daysUntil(p.date); return d>=0&&d<=7; });
+  const ok      = filtered.filter(p => daysUntil(p.date) > 7);
+
+  let html = '';
+  if (expired.length) html += `<div class="list-divider">${t('divider_expired')}</div>` + expired.map(cardHtml).join('');
+  if (urgent.length)  html += `<div class="list-divider">${t('divider_urgent')}</div>`  + urgent.map(cardHtml).join('');
+  if (ok.length)      html += `<div class="list-divider">${t('divider_fresh')}</div>`   + ok.map(cardHtml).join('');
+  list.innerHTML = html;
+}
+
+function updateStats() {
+  document.getElementById('statOk').textContent     = products.filter(p=>daysUntil(p.date)>7).length;
+  document.getElementById('statWarn').textContent   = products.filter(p=>{const d=daysUntil(p.date);return d>=0&&d<=7;}).length;
+  document.getElementById('statDanger').textContent = products.filter(p=>daysUntil(p.date)<0).length;
+}
+
+function selectEmoji(btn) {
+  document.querySelectorAll('.emoji-btn').forEach(b=>b.classList.remove('selected'));
+  btn.classList.add('selected');
+  selectedEmoji = btn.dataset.emoji;
+}
+
+// ── Init ─────────────────────────────────────────
+const defDate = new Date(); defDate.setDate(defDate.getDate()+7);
+document.getElementById('expiryDate').value = defDate.toISOString().split('T')[0];
+document.getElementById('productName').addEventListener('keydown', e => { if(e.key==='Enter') addProduct(); });
+
+applyI18n();
+
+const savedToken = getToken();
+if (savedToken) {
+  initWithToken(savedToken);
+} else {
+  document.getElementById('setupScreen').classList.remove('hidden');
+  document.getElementById('mainApp').style.display = 'none';
+}
+
+// ── PWA Service Worker ────────────────────────────
+if ('serviceWorker' in navigator) {
+  const sw = `const C='manzanitos-v2';
+  self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(['.']))));
+  self.addEventListener('fetch',e=>{
+    if(e.request.url.includes('todoist.com')||e.request.url.includes('googleapis.com'))return;
+    e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request)));
+  });`;
+  const url = URL.createObjectURL(new Blob([sw],{type:'text/javascript'}));
+  navigator.serviceWorker.register(url).catch(()=>{});
+}
+</script>
+</body>
+</html>

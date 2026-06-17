@@ -703,12 +703,14 @@ async function loadRecipes() {
   try {
     await EPICURE.load();
     epicureLoaded = true;
-    document.getElementById('recipesHow').style.display = 'block';
-    console.log('Epicure recipe engine loaded');
+    const howEl = document.getElementById('recipesHow');
+    if (howEl) howEl.style.display = 'block';
   } catch(e) {
-    console.warn('Epicure not available:', e.message);
-    document.getElementById('recipesBtn').disabled = true;
-    document.getElementById('recipesHow').textContent = t('recipes_error');
+    console.warn('Epicure load failed:', e.message);
+    const btn = document.getElementById('recipesBtn');
+    if (btn) btn.disabled = true;
+    const howEl = document.getElementById('recipesHow');
+    if (howEl) howEl.textContent = t('recipes_error');
   }
 }
 
@@ -792,7 +794,11 @@ loadRecipes();
 if ('serviceWorker' in navigator) {
   const sw = `const C='manzanitos-v3';
   self.addEventListener('install',e=>{
+    self.skipWaiting();
     e.waitUntil(caches.open(C).then(c=>c.addAll(['.','epicure.js','epicure_data/embeddings.bin','epicure_data/itos.json','epicure_data/modes.json','epicure_data/supervised_poles.json'])));
+  });
+  self.addEventListener('activate',e=>{
+    e.waitUntil(clients.claim());
   });
   self.addEventListener('fetch',e=>{
     if(e.request.url.includes('todoist.com')||e.request.url.includes('googleapis.com'))return;

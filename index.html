@@ -150,6 +150,23 @@ input[type="date"]::-webkit-calendar-picker-indicator{cursor:pointer}
 
 .setup-lang-btn{position:absolute;top:24px;right:24px;background:var(--bg3);border:1px solid var(--border);color:var(--text-dim);height:36px;padding:0 14px;border-radius:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;transition:all .2s;font-family:var(--mono);font-weight:300;gap:6px}
 .setup-lang-btn:hover{background:var(--border);color:var(--accent)}
+
+.recipes-section{margin:0 24px 24px}
+.recipes-btn{width:100%;padding:14px;background:var(--accent);border:none;color:#fff;font-family:var(--mono);font-size:13px;font-weight:400;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;border-radius:12px;transition:all .2s;margin-top:8px}
+.recipes-section{margin:0 24px 24px}
+.recipes-btn{width:100%;padding:14px;background:var(--accent);border:none;color:#fff;font-family:var(--mono);font-size:13px;font-weight:400;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;border-radius:12px;transition:all .2s;margin-top:8px}
+.recipes-btn:hover{background:var(--accent-hover)}
+.recipes-btn:active{transform:scale(.98)}
+.recipes-btn:disabled{background:var(--bg3);color:var(--text-muted);cursor:not-allowed}
+.recipes-results{margin-top:12px}
+.recipe-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:10px;animation:slideIn .3s ease}
+.recipe-card .recipe-ingredient{font-family:var(--serif);font-size:15px;color:var(--text);flex:1}
+.recipe-card .recipe-score{font-size:10px;color:var(--text-muted);font-family:var(--mono);background:var(--bg3);padding:2px 8px;border-radius:8px}
+.recipes-hint{font-size:10px;color:var(--text-muted);margin-top:6px;text-align:center;font-style:italic}
+.recipes-loader{display:flex;align-items:center;justify-content:center;gap:8px;padding:24px;color:var(--text-muted);font-size:14px}
+.recipes-loader .epicure-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);animation:pulse 1.5s infinite}
+.recipes-pantry-tag{display:inline-block;font-size:10px;background:var(--bg3);border:1px solid var(--border);padding:2px 8px;border-radius:8px;margin:2px;font-family:var(--mono);color:var(--text-dim)}}
+.recipes-hint-row{display:flex;gap:6px;margin-bottom:10px;align-items:center;font-size:11px;color:var(--text-muted)}
 </style>
 </head>
 <body>
@@ -234,10 +251,26 @@ input[type="date"]::-webkit-calendar-picker-indicator{cursor:pointer}
       <div class="skeleton" style="opacity:.6;margin-top:8px"></div>
     </div>
   </div>
+
+  <div class="recipes-section" id="recipesSection">
+    <div class="section-label" data-i18n="section_recipes"></div>
+    <div class="recipes-hint-row">
+      <span class="recipes-pantry-tag" id="recipesPantryTags"></span>
+    </div>
+    <button class="recipes-btn" id="recipesBtn" onclick="suggestRecipes()" data-i18n="btn_recipes"></button>
+    <div class="recipes-results" id="recipesResults"></div>
+    <div class="recipes-loader" id="recipesLoader" style="display:none">
+      <span class="epicure-dot"></span>
+      <span class="epicure-dot"></span>
+      <span class="epicure-dot"></span>
+    </div>
+    <div class="recipes-hint" id="recipesHow" data-i18n="recipes_how"></div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
 
+<script src="epicure.js"></script>
 <script>
 // ════════════════════════════════════════════════
 //  I18N
@@ -284,8 +317,16 @@ const i18n = {
     toast_token_first: 'Paste your token first',
     toast_invalid: 'Invalid token — try again',
     date_locale: 'en-US',
+    section_recipes: 'Recipe ideas',
+    btn_recipes: '🍳 Suggest recipes',
+    btn_recipes_loading: '⏳ Thinking...',
+    recipes_empty: ['Add ingredients to your pantry', 'Get recipe suggestions based on what you have'],
+    recipes_error: 'Could not load recipe engine',
+    recipes_based_on: 'Based on your pantry:',
+    recipes_how: 'Uses ingredient pairings from millions of recipes worldwide.',
+    recipes_pairings: 'Best pairings',pairings',
+    recipes_cuisine_hint: 'Try with a cuisine direction',
   },
-  es: {
     lang_switch: 'English',
     setup_line1: 'Para empezar, pega tu token de Todoist.',
     setup_line2_pre: 'Lo encuentras en',
@@ -326,6 +367,15 @@ const i18n = {
     toast_token_first: 'Pega tu token primero',
     toast_invalid: 'Token inválido — vuelve a pegarlo',
     date_locale: 'es-MX',
+    section_recipes: 'Ideas de recetas',
+    btn_recipes: '🍳 Sugerir recetas',
+    btn_recipes_loading: '⏳ Pensando...',
+    recipes_empty: ['Agrega ingredientes a tu despensa', 'Recibe sugerencias de recetas según lo que tienes'],
+    recipes_error: 'No se pudo cargar el motor de recetas',
+    recipes_based_on: 'Basado en tu despensa:',
+    recipes_how: 'Usa combinaciones de ingredientes de millones de recetas mundiales.',
+    recipes_pairings: 'Mejores combinaciones',combinaciones',
+    recipes_cuisine_hint: 'Prueba con una dirección culinaria',inaria',
   }
 };
 
@@ -647,10 +697,104 @@ if (savedToken) {
   document.getElementById('mainApp').style.display = 'none';
 }
 
+// ── Recipe Suggestions (Epicure) ────────────────────
+let epicureLoaded = false;
+
+async function loadRecipes() {
+  try {
+    await EPICURE.load();
+    epicureLoaded = true;
+    document.getElementById('recipesHow').style.display = 'block';
+    console.log('Epicure recipe engine loaded');
+  } catch(e) {
+    console.warn('Epicure not available:', e.message);
+    document.getElementById('recipesBtn').disabled = true;
+    document.getElementById('recipesHow').textContent = t('recipes_error');
+  }
+}
+
+function getEpicureIngredients() {
+  // Extract product names from pantry and map to Epicure vocab
+  const names = products.map(p => p.name.toLowerCase().replace(/\s+/g, '_'));
+  return names;
+}
+
+async function suggestRecipes() {
+  if (!epicureLoaded) {
+    showToast(t('recipes_error'), 'error');
+    return;
+  }
+  const btn = document.getElementById('recipesBtn');
+  const loader = document.getElementById('recipesLoader');
+  const results = document.getElementById('recipesResults');
+  btn.disabled = true;
+  btn.textContent = t('btn_recipes_loading');
+  loader.style.display = 'flex';
+
+  const ingredients = getEpicureIngredients();
+  if (ingredients.length === 0) {
+    const [title, sub] = t('recipes_empty');
+    results.innerHTML = `<div class="empty"><div class="empty-icon">🍳</div><div class="empty-text">${title}</div><div class="empty-sub">${sub}</div></div>`;
+    btn.disabled = false;
+    btn.textContent = t('btn_recipes');
+    loader.style.display = 'none';
+    return;
+  }
+
+  // Show what we're working with
+  const tagsEl = document.getElementById('recipesPantryTags');
+  tagsEl.innerHTML = ingredients.slice(0, 8).map(n => `<span class="recipes-pantry-tag">${n.replace(/_/g, ' ')}</span>`).join('');
+
+  try {
+    const suggestions = EPICURE.suggestRecipes(ingredients, 8);
+
+    let html = '';
+    for (const [name, score] of suggestions) {
+      const pct = Math.round(score * 100);
+      html += `<div class="recipe-card">
+        <span style="font-size:22px">🍽</span>
+        <span class="recipe-ingredient">${name.replace(/_/g, ' ')}</span>
+        <span class="recipe-score">${pct}%</span>
+      </div>`;
+    }
+
+    if (suggestions.length > 0) {
+      // Also try a cuisine SLERP for variety
+      const cuisines = EPICURE.getCuisineDirections();
+      if (ingredients.length >= 2) {
+        const mainIng = ingredients[0];
+        const cuisine = cuisines[Math.floor(Math.random() * cuisines.length)];
+        const slerpResults = EPICURE.slerp(mainIng, cuisine, 15, 5);
+        html += `<div class="list-divider" style="margin-top:12px">🎯 ${t('recipes_cuisine_hint')}</div>`;
+        for (const [n, s] of slerpResults) {
+          html += `<div class="recipe-card">
+            <span style="font-size:22px">🌍</span>
+            <span class="recipe-ingredient">${n.replace(/_/g, ' ')}</span>
+            <span class="recipe-score">${Math.round(s * 100)}%</span>
+          </div>`;
+        }
+      }
+    }
+
+    results.innerHTML = html || '<div class="empty">Nothing found</div>';
+  } catch(e) {
+    results.innerHTML = `<div class="empty">${t('recipes_error')}</div>`;
+  }
+
+  btn.disabled = false;
+  btn.textContent = t('btn_recipes');
+  loader.style.display = 'none';
+}
+
+// Auto-load recipes when app starts
+setTimeout(() => { if (getToken()) loadRecipes(); }, 500);
+
 // ── PWA Service Worker ────────────────────────────
 if ('serviceWorker' in navigator) {
-  const sw = `const C='manzanitos-v2';
-  self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(['.']))));
+  const sw = `const C='manzanitos-v3';
+  self.addEventListener('install',e=>{
+    e.waitUntil(caches.open(C).then(c=>c.addAll(['.','epicure.js','epicure_data/embeddings.bin','epicure_data/itos.json','epicure_data/modes.json','epicure_data/supervised_poles.json'])));
+  });
   self.addEventListener('fetch',e=>{
     if(e.request.url.includes('todoist.com')||e.request.url.includes('googleapis.com'))return;
     e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request)));

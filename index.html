@@ -439,6 +439,7 @@ function initWithToken(token) {
   H = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
   document.getElementById('setupScreen').classList.add('hidden');
   document.getElementById('mainApp').style.display = 'flex';
+  loadRecipes();
   loadFromTodoist();
 }
 
@@ -785,7 +786,7 @@ async function suggestRecipes() {
 }
 
 // Auto-load recipes when app starts
-setTimeout(() => { if (getToken()) loadRecipes(); }, 500);
+loadRecipes();
 
 // ── PWA Service Worker ────────────────────────────
 if ('serviceWorker' in navigator) {

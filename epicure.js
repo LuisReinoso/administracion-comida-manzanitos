@@ -16,10 +16,10 @@ const EPICURE = (() => {
   async function load(baseUrl) {
     baseUrl = baseUrl || 'epicure_data/';
     const [embBin, itosJson, modesJson, supJson] = await Promise.all([
-      fetch(baseUrl + 'embeddings.bin').then(r => r.arrayBuffer()),
-      fetch(baseUrl + 'itos.json').then(r => r.json()),
-      fetch(baseUrl + 'modes.json').then(r => r.json()),
-      fetch(baseUrl + 'supervised_poles.json').then(r => r.json()),
+      fetch(baseUrl + 'embeddings.bin', { cache: 'no-cache' }).then(r => r.arrayBuffer()),
+      fetch(baseUrl + 'itos.json', { cache: 'no-cache' }).then(r => r.json()),
+      fetch(baseUrl + 'modes.json', { cache: 'no-cache' }).then(r => r.json()),
+      fetch(baseUrl + 'supervised_poles.json', { cache: 'no-cache' }).then(r => r.json()),
     ]);
     E = new Float32Array(embBin);
     nVocab = E.length / dModel;
